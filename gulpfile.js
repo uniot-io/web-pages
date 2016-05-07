@@ -6,9 +6,10 @@ var cssnano   = require('gulp-cssnano');
 var htmlmin   = require('gulp-htmlmin');
 var smoosher  = require('gulp-smoosher');
 var rename    = require('gulp-rename');
-var replace   = require('gulp-replace');
-var insert    = require('gulp-insert');
+var replace   = require('gulp-replace');    // gulp-replace is candidate for simplification by gulp-tap
+var insert    = require('gulp-insert');     // gulp-insert is candidate for simplification by gulp-tap
 var clean     = require('gulp-clean');
+var tap       = require('gulp-tap');
 var sequence  = require('run-sequence');
 
 var paths = {
@@ -65,6 +66,10 @@ gulp.task('build', ['smoosh'], function() {
   gulp.src(path.join(paths.tmp, '*.min.html'))
   .pipe(replace('"', '\\"'))
   .pipe(insert.wrap(gen.prefix, gen.suffix))
+  .pipe(tap(function(file) {
+    var htmlDoc = path.basename(file.path).replace('.min.', '_').toUpperCase();
+    file.contents = new Buffer(String(file.contents).replace('HTML_DOC', htmlDoc));
+  }))
   .pipe(rename({
     extname: '.h'
   }))
