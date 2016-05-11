@@ -15,7 +15,8 @@ var sequence  = require('run-sequence');
 var paths = {
   src         : './src',
   tmp         : './tmp',
-  out         : './out'
+  out         : './out',
+  prod        : './..'
 }
 
 var gen = {
@@ -63,7 +64,7 @@ gulp.task('clean:out', function() {
 });
 
 gulp.task('build', ['smoosh'], function() {
-  gulp.src(path.join(paths.tmp, '*.min.html'))
+  return gulp.src(path.join(paths.tmp, '*.min.html'))
   .pipe(replace('"', '\\"'))
   .pipe(insert.wrap(gen.prefix, gen.suffix))
   .pipe(tap(function(file) {
@@ -76,9 +77,16 @@ gulp.task('build', ['smoosh'], function() {
   .pipe(gulp.dest(paths.out));
 });
 
-gulp.task('default', function(call) {
+gulp.task('make', function(call) {
   sequence(
     ['clean:tmp', 'clean:out'],
     'build',
     call);
 });
+
+gulp.task('make:prod', ['make'], function(call) {
+  return gulp.src(path.join(paths.out, '*.h'))
+  .pipe(gulp.dest(paths.prod));
+});
+
+gulp.task('default', ['make']);
