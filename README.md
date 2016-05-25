@@ -1,1 +1,1 @@
-[![Build Status](https://travis-ci.org/bitsybits/web-pages.svg?branch=master)](https://travis-ci.org/bitsybits/web-pages)
+[![Build Status](https://travis-ci.org/bitsybits/web-pages.svg?branch=master)](https://travis-ci.org/bitsybits/web-pages) [![Dependency Status](https://gemnasium.com/badges/github.com/bitsybits/web-pages.svg)](https://gemnasium.com/github.com/bitsybits/web-pages)
