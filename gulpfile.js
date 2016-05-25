@@ -9,6 +9,7 @@ var rename    = require('gulp-rename');
 var clean     = require('gulp-clean');
 var tap       = require('gulp-tap');
 var sequence  = require('run-sequence');
+var favicon   = require('gulp-base64-favicon');
 
 var paths = {
   src         : './src',
@@ -40,6 +41,7 @@ gulp.task('minify:html', function() {
 
 gulp.task('smoosh', ['minify:html', 'minify:css'], function() {
   return gulp.src(path.join(paths.tmp, '*.html'))
+  .pipe(favicon(paths))
   .pipe(smoosher())
   .pipe(rename({
     suffix: '.min'

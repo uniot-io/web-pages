@@ -2,9 +2,8 @@
   "name": "web-pages",
   "version": "0.1.0",
   "description": "bitsy web pages for ESP8266",
-  "main": "gulpfile.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "make": "gulp make:prod"
   },
   "repository": {
     "type": "git",
@@ -18,6 +17,7 @@
   "homepage": "https://github.com/bitsybits/web-pages#readme",
   "devDependencies": {
     "gulp": "^3.9.1",
+    "gulp-base64-favicon": "^1.0.2",
     "gulp-clean": "^0.3.2",
     "gulp-cssnano": "^2.1.2",
     "gulp-htmlmin": "^2.0.0",
