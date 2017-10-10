@@ -19,6 +19,7 @@ form legend {
 }
 
 form input {
+  -webkit-appearance: none;
   padding: 0.6em 0.6em;
   margin: 6px 0;
   width: 100%;
