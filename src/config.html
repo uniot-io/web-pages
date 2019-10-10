@@ -13,10 +13,15 @@
   <form action="wifi" method="get">
     <fieldset>
       <legend>Network Settings</legend>
-      <input name="ssid" type="text" placeholder="SSID" required>
+      <input name="ssid" type="text" placeholder="SSID" list="ssid-list" required>
+      <datalist id="ssid-list"></datalist>
       <input name="pass" type="password" placeholder="Password">
       <input type="submit" value="Connect">
+      <input id="refresh" type="button" value="Scan Networks" onclick="scan()">
     </fieldset>
   </form>
+  <!-- smoosh -->
+  <script src="app.js"></script>
+  <!-- endsmoosh -->
 </body>
 </html>

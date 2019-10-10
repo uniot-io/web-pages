@@ -4,6 +4,7 @@ var path      = require('path');
 var gulp      = require('gulp');
 var cssnano   = require('gulp-cssnano');
 var htmlmin   = require('gulp-htmlmin');
+var minify    = require('gulp-minify');
 var smoosher  = require('gulp-smoosher');
 var rename    = require('gulp-rename');
 var clean     = require('gulp-clean');
@@ -23,6 +24,17 @@ var gen = {
   suffix      : '";\n'
 }
 
+gulp.task('minify:js', function () {
+  return gulp.src(path.join(paths.src, '*.js'))
+  .pipe(minify({
+    ext: {
+      src: '-src.js',
+      min: '.js'
+    },
+  }))
+  .pipe(gulp.dest(paths.tmp));
+});
+
 gulp.task('minify:css', function() {
   return gulp.src(path.join(paths.src, '*.css'))
   .pipe(cssnano())
@@ -39,7 +51,7 @@ gulp.task('minify:html', function() {
   .pipe(gulp.dest(paths.tmp))
 });
 
-gulp.task('smoosh', ['minify:html', 'minify:css'], function() {
+gulp.task('smoosh', ['minify:html', 'minify:css', 'minify:js'], function () {
   return gulp.src(path.join(paths.tmp, '*.html'))
   .pipe(favicon(paths))
   .pipe(smoosher())
