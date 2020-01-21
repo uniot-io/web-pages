@@ -1,0 +1,16 @@
+{
+  "lockfileVersion": 1,
+  "dependencies": {
+    "gulp-smoosher": {
+      "version": "0.0.9",
+      "requires": {
+        "lodash": "4.17.15"
+      },
+      "dependencies": {
+        "lodash": {
+          "version": "4.17.15"
+        }
+      }
+    }
+  }
+}

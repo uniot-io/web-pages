@@ -1,104 +1,103 @@
-'use strict';
+'use strict'
 
-var path      = require('path');
-var gulp      = require('gulp');
-var cssnano   = require('gulp-cssnano');
-var htmlmin   = require('gulp-htmlmin');
-var minify    = require('gulp-minify');
-var smoosher  = require('gulp-smoosher');
-var rename    = require('gulp-rename');
-var clean     = require('gulp-clean');
-var tap       = require('gulp-tap');
-var sequence  = require('run-sequence');
-var favicon   = require('gulp-base64-favicon');
+const path = require('path')
+const gulp = require('gulp')
+const cleancss = require('gulp-clean-css')
+const htmlmin = require('gulp-htmlmin')
+const minify = require('gulp-minify')
+const smoosher = require('gulp-smoosher')
+const rename = require('gulp-rename')
+const clean = require('gulp-clean')
+const tap = require('gulp-tap')
+const favicon = require('gulp-base64-favicon')
 
-var paths = {
-  src         : './src',
-  tmp         : './tmp',
-  out         : './out',
-  prod        : './..'
+const paths = {
+  src: './src',
+  tmp: './tmp',
+  out: './out',
+  prod: './..'
 }
 
-var gen = {
-  prefix      : '#pragma once\n\nconst char HTML_DOC[] PROGMEM = "',
-  suffix      : '";\n'
+const gen = {
+  prefix: '#pragma once\n\nconst char HTML_DOC[] PROGMEM = "',
+  suffix: '";\n'
 }
 
-gulp.task('minify:js', function () {
+gulp.task('minify:js', () => {
   return gulp.src(path.join(paths.src, '*.js'))
-  .pipe(minify({
-    ext: {
-      src: '-src.js',
-      min: '.js'
-    },
-  }))
-  .pipe(gulp.dest(paths.tmp));
-});
+    .pipe(minify({
+      ext: {
+        src: '-src.js',
+        min: '.js'
+      }
+    }))
+    .pipe(gulp.dest(paths.tmp))
+})
 
-gulp.task('minify:css', function() {
+gulp.task('minify:css', () => {
   return gulp.src(path.join(paths.src, '*.css'))
-  .pipe(cssnano())
-  .pipe(gulp.dest(paths.tmp));
-});
+    .pipe(cleancss({
+      level: {
+        2: {
+          all: true
+        }
+      }}))
+    .pipe(gulp.dest(paths.tmp))
+})
 
-gulp.task('minify:html', function() {
+gulp.task('minify:html', () => {
   return gulp.src(path.join(paths.src, '*.html'))
-  .pipe(htmlmin({
-    collapseWhitespace: true,
-    removeComments: false,    // needed for smoosher templates
-    minifyCSS: false          // because cssnano is smarter than clean-css that is in htmlmin
-  }))
-  .pipe(gulp.dest(paths.tmp))
-});
+    .pipe(htmlmin({
+      collapseWhitespace: true,
+      removeComments: false, // needed for smoosher templates
+      minifyCSS: false // because cssnano is smarter than clean-css that is in htmlmin
+    }))
+    .pipe(gulp.dest(paths.tmp))
+})
 
-gulp.task('smoosh', ['minify:html', 'minify:css', 'minify:js'], function () {
+gulp.task('smoosh', gulp.series('minify:html', 'minify:css', 'minify:js', () => {
   return gulp.src(path.join(paths.tmp, '*.html'))
-  .pipe(favicon(paths))
-  .pipe(smoosher())
-  .pipe(rename({
-    suffix: '.min'
-  }))
-  .pipe(gulp.dest(paths.tmp));
-});
+    .pipe(favicon(paths))
+    .pipe(smoosher())
+    .pipe(rename({
+      suffix: '.min'
+    }))
+    .pipe(gulp.dest(paths.tmp))
+}))
 
-gulp.task('clean:tmp', function() {
+gulp.task('clean:tmp', () => {
   return gulp.src(paths.tmp, {
-    read: false
-  })
-  .pipe(clean());
-});
+    read: false,
+    allowEmpty: true
+  }).pipe(clean())
+})
 
-gulp.task('clean:out', function() {
+gulp.task('clean:out', () => {
   return gulp.src(paths.out, {
-    read: false
-  })
-  .pipe(clean());
-});
+    read: false,
+    allowEmpty: true
+  }).pipe(clean())
+})
 
-gulp.task('build', ['smoosh'], function() {
+gulp.task('build', gulp.series('smoosh', () => {
   return gulp.src(path.join(paths.tmp, '*.min.html'))
-  .pipe(tap(function(file) {
-    var htmlDoc = path.basename(file.path).replace('.min.', '_').toUpperCase();
-    var genPrefix = gen.prefix.replace('HTML_DOC', htmlDoc);
-    var genContent = String(file.contents).replace(/"/g, '\\"');
-    file.contents = new Buffer(genPrefix + genContent + gen.suffix);
-  }))
-  .pipe(rename({
-    extname: '.h'
-  }))
-  .pipe(gulp.dest(paths.out));
-});
+    .pipe(tap(function (file) {
+      const htmlDoc = path.basename(file.path).replace('.min.', '_').toUpperCase()
+      const genPrefix = gen.prefix.replace('HTML_DOC', htmlDoc)
+      const genContent = String(file.contents).replace(/"/g, '\\"')
+      file.contents = Buffer.from(genPrefix + genContent + gen.suffix)
+    }))
+    .pipe(rename({
+      extname: '.h'
+    }))
+    .pipe(gulp.dest(paths.out))
+}))
 
-gulp.task('make', function(call) {
-  sequence(
-    ['clean:tmp', 'clean:out'],
-    'build',
-    call);
-});
+gulp.task('make', gulp.series('clean:tmp', 'clean:out', 'build'))
 
-gulp.task('make:prod', ['make'], function() {
+gulp.task('make:prod', gulp.series('make', () => {
   return gulp.src(path.join(paths.out, '*.h'))
-  .pipe(gulp.dest(paths.prod));
-});
+    .pipe(gulp.dest(paths.prod))
+}))
 
-gulp.task('default', ['make']);
+gulp.task('default', gulp.series('make'))
