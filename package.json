@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "description": "bitsy web pages for ESP8266",
   "scripts": {
-    "make": "gulp make:prod"
+    "make": "gulp make:prod",
+    "dev": "node server.js"
   },
   "repository": {
     "type": "git",
