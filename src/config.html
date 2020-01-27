@@ -20,12 +20,15 @@
   </svg>
   <form action="wifi" method="get">
     <fieldset>
-      <legend>Network Settings</legend>
+      <div>Account Settings</div>
+      <input id="account" name="account" type="text" placeholder="Account Id" required>
+      <div>Network Settings</div>
       <input name="ssid" type="text" placeholder="SSID" list="ssid-list" required>
       <datalist id="ssid-list"></datalist>
-      <input name="pass" type="password" placeholder="Password">
-      <input type="submit" value="Connect">
+      <input id="pass" name="pass" type="password" placeholder="Password">
+      <input type="button" value="Toggle Password" onclick="toggle()">
       <input id="refresh" type="button" value="Scan Networks" onclick="scan()">
+      <input type="submit" value="Connect">
     </fieldset>
   </form>
   <!-- smoosh -->

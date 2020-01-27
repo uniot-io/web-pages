@@ -1,3 +1,14 @@
+if (window.location.hostname !== 'settings.uniot.io')
+  window.location.replace('http://settings.uniot.io')
+
+if (localStorage.account)
+  document.getElementById('account').value = localStorage.account
+
+window.addEventListener('message', function (evt) {
+  if (evt.data.account)
+    localStorage.account = evt.data.account
+}, false)
+
 function get (url, success) {
   var xhr = new XMLHttpRequest()
   xhr.open('GET', url)
@@ -26,4 +37,13 @@ function scan () {
       options += '<option value="' + res[i] + '"/>'
     list.innerHTML = options
   })
+}
+
+function toggle () {
+  var states = {
+    password: 'text',
+    text: 'password'
+  }
+  var pass = document.getElementById('pass')
+  pass.type = states[pass.type]
 }

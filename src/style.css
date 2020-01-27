@@ -14,7 +14,7 @@ form fieldset {
   border: 0;
 }
 
-form legend {
+form div {
   display: block;
   width: 100%;
   padding: .3em 0;
