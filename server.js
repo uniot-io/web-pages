@@ -16,7 +16,7 @@ app.get('/scan', (req, res) => {
   setTimeout(() => res.send(['Matrix', 'Space', 'Space', 'Space', 'Test']), 2000)
 })
 
-app.get('/wifi', (req, res) => {
+app.get('/config', (req, res) => {
   res.send(req.query)
 })
 

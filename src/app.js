@@ -2,12 +2,7 @@ if (window.location.hostname !== 'settings.uniot.io')
   window.location.replace('http://settings.uniot.io')
 
 if (localStorage.account)
-  document.getElementById('account').value = localStorage.account
-
-window.addEventListener('message', function (evt) {
-  if (evt.data.account)
-    localStorage.account = evt.data.account
-}, false)
+  document.getElementById('acc').value = localStorage.account
 
 function get (url, success) {
   var xhr = new XMLHttpRequest()
