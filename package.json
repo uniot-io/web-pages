@@ -22,6 +22,7 @@
     "gulp-base64-favicon": "^1.0.3",
     "gulp-clean": "^0.3.2",
     "gulp-clean-css": "^4.2.0",
+    "gulp-gzip": "^1.4.2",
     "gulp-htmlmin": "^5.0.0",
     "gulp-minify": "^3.1.0",
     "gulp-rename": "^1.2.2",

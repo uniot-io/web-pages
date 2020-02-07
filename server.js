@@ -12,6 +12,12 @@ app.get('/min', (req, res) => {
   res.sendFile(path.join(__dirname, 'tmp', 'config.min.html'))
 })
 
+app.get('/gz', (req, res) => {
+  res.set('Content-Encoding', 'gzip')
+  res.set('Content-Type', 'text/html')
+  res.sendFile(path.join(__dirname, 'tmp', 'config.min.html.gz'))
+})
+
 app.get('/scan', (req, res) => {
   setTimeout(() => res.send(['Matrix', 'Space', 'Space', 'Space', 'Test']), 2000)
 })
