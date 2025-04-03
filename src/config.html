@@ -1,38 +1,39 @@
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <!-- shortcut::favicon.png -->
-  <title>Network Settings</title>
-  <!-- smoosh -->
-  <link rel="stylesheet" href="style.css">
-  <!-- endsmoosh -->
-</head>
-<body ontouchstart="">
-  <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 38 45">
-    <path
-      d="M23.6 0c1.4 0 2 0 2.5.4.4.5.4 1.1.4 2.5v10.5c0 1.4 0 2.1-.4 2.5-.5.5-1.1.5-2.5.5h-9.2c-1.4 0-2 0-2.5-.5-.4-.4-.4-1-.4-2.5V3c0-1.4 0-2 .4-2.5.4-.4 1.1-.4 2.5-.4h9.2z"
-      fill="#4C68FC" />
-    <path
-      d="M0 10.3c0-1.4 0-2.1.4-2.5.5-.5 1.2-.5 2.5-.5h3.7c1.3 0 2 0 2.5.5.4.4.4 1 .4 2.5v24.1c0 .6 0 .8.2 1 .1.2.4.2 1 .2h16.6c.6 0 .9 0 1-.2.2-.2.2-.4.2-1V10.3c0-1.4 0-2.1.4-2.5.5-.5 1.2-.5 2.5-.5h3.7c1.3 0 2 0 2.5.5.4.4.4 1 .4 2.5V42c0 1.4 0 2-.4 2.5-.5.4-1.2.4-2.5.4H2.9c-1.3 0-2 0-2.5-.4C0 44 0 43.5 0 42V10.3z"
-      fill="#303340" />
-  </svg>
-  <form action="config" method="get">
-    <fieldset>
-      <div>Account Settings</div>
-      <input id="acc" name="acc" type="text" placeholder="Account Id" required>
-      <div>Network Settings</div>
-      <input name="ssid" type="text" placeholder="SSID" list="ssid-list" required>
-      <datalist id="ssid-list"></datalist>
-      <input id="pass" name="pass" type="password" placeholder="Password">
-      <input type="button" value="Toggle Password" onclick="toggle()">
-      <input id="refresh" type="button" value="Scan Networks" onclick="scan()">
-      <input type="submit" value="Connect">
-    </fieldset>
-  </form>
-  <!-- smoosh -->
-  <script src="app.js"></script>
-  <!-- endsmoosh -->
-</body>
+<!DOCTYPE html>
+<html data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <!-- shortcut::favicon.png -->
+    <title>Uniot Settings</title>
+    <!-- smoosh -->
+    <link rel="stylesheet" href="normalize.min.css" />
+    <link rel="stylesheet" href="pico.min.css" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="van-1.5.3.nomodule.min.js"></script>
+    <script src="cbor.js"></script>
+    <script src="translations.js"></script>
+    <script src="app.js"></script>
+    <!-- endsmoosh -->
+  </head>
+  <body ontouchstart="">
+    <main>
+      <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 38 45">
+        <path
+          d="M23.6 0c1.4 0 2 0 2.5.4.4.5.4 1.1.4 2.5v10.5c0 1.4 0 2.1-.4 2.5-.5.5-1.1.5-2.5.5h-9.2c-1.4 0-2 0-2.5-.5-.4-.4-.4-1-.4-2.5V3c0-1.4 0-2 .4-2.5.4-.4 1.1-.4 2.5-.4h9.2z"
+          fill="#4C68FC"
+        />
+        <path
+          d="M0 10.3c0-1.4 0-2.1.4-2.5.5-.5 1.2-.5 2.5-.5h3.7c1.3 0 2 0 2.5.5.4.4.4 1 .4 2.5v24.1c0 .6 0 .8.2 1 .1.2.4.2 1 .2h16.6c.6 0 .9 0 1-.2.2-.2.2-.4.2-1V10.3c0-1.4 0-2.1.4-2.5.5-.5 1.2-.5 2.5-.5h3.7c1.3 0 2 0 2.5.5.4.4.4 1 .4 2.5V42c0 1.4 0 2-.4 2.5-.5.4-1.2.4-2.5.4H2.9c-1.3 0-2 0-2.5-.4C0 44 0 43.5 0 42V10.3z"
+          fill="#303340"
+        />
+      </svg>
+      <section id="app" class="container"></section>
+    </main>
+
+    <!-- smoosh -->
+    <script>
+      van.add(document.getElementById('app'), App())
+    </script>
+    <!-- endsmoosh -->
+  </body>
 </html>
