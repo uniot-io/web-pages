@@ -1,12 +1,13 @@
 const ACTIONS = {
   STATUS: 0,
-  SAVE: 1
+  SAVE: 1,
+  SCAN: 2
 }
 
 const RSSI_THRESHOLD = -75
 const SMOOTHING_ALPHA = 0.3
 
-const { div, input, span, label, hr, ul, li, dialog, button, h2, p, footer, article, header, fieldset, br, b, small } =
+const { details, summary, div, input, span, label, hr, ul, li, dialog, button, h2, h5, form, main, p, footer, article, header, fieldset, br, b, small } =
   van.tags
 
 const language = van.state('en')
@@ -19,9 +20,17 @@ const acc = van.state('')
 const newAcc = van.state('')
 const nets = van.state([])
 const ssid = van.state('')
-const ssidHintRequired = van.state(null)
 const pass = van.state('')
 const passType = van.state('password')
+
+const connecting = van.state(false)
+const homeNet = van.state('')
+const scanPause = van.state(false)
+const accError = van.state(false)
+const ssidError = van.state(false)
+const passError = van.state(false)
+const selectedNet = van.state(null)
+const isManualNet = van.state(false)
 
 if (localStorage.account) {
   newAcc.val = localStorage.account
@@ -45,9 +54,14 @@ const connectWebSocket = () => {
 
       if (data.id !== undefined) id.val = data.id
       if (data.acc !== undefined) acc.val = data.acc
+      if (data.homeNet !== undefined) homeNet.val = data.homeNet
       if (data.nets !== undefined) nets.val = processNetworks(nets.val, data.nets)
       if (data.success !== undefined) {
+        setLoading(false)
         if (data.success) {
+          homeNet.val = ssid.val
+          acc.val = newAcc.val || acc.val
+          resetForm()
           showMsg(tt('success'), tt('connectSuccess'))
         } else {
           showMsg(tt('error'), tt('connectError'))
@@ -70,7 +84,7 @@ const processNetworks = (oldNets, newNets) => {
   // Create a map with BSSID as key
   const oldNetsMap = new Map(oldNets.map(([bssid, ssid, rssi, secured]) => [bssid, { ssid, rssi, secured }]))
 
-  const combinedNets = []
+  let combinedNets = []
 
   for (const [bssid, ssid, rssi, secured] of newNets) {
     if (oldNetsMap.has(bssid)) {
@@ -97,14 +111,65 @@ const processNetworks = (oldNets, newNets) => {
       combinedNets.push([bssid, ssid, decayedRssi, secured])
     }
   }
+  // Sort by SSID
+  combinedNets.sort((a, b) => a[1].localeCompare(b[1]))
 
-  // Sort strongest first
-  return combinedNets.sort((a, b) => b[2] - a[2])
+  // Update selected net position in the list
+  if (selectedNet.val !== null) {
+    const selectedNetIndex = (selectedNet.val !== null && !isManualNet.val)
+      ? oldNets.findIndex(net => net[0] === selectedNet.val[0])
+      : null
+    // Check if the net already exists in combinedNets based on the first element.
+    const existingNetIndex = combinedNets.findIndex(net => net[0] === selectedNet.val[0]);
+
+    // Either remove the net from combinedNets, or clone and modify the provided net value.
+    const updatedSelectedNet =
+      existingNetIndex !== -1
+        ? combinedNets.splice(existingNetIndex, 1)[0]
+        : (() => {
+            const netCopy = [...selectedNet.val];
+            netCopy[2] = null;
+            return netCopy;
+          })();
+
+    // Insert the updated net at the given index or at the end if selectedNetIndex is out of bounds.
+    const insertionIndex = Math.min(selectedNetIndex, combinedNets.length);
+    combinedNets.splice(insertionIndex, 0, updatedSelectedNet);
+  }
+
+  // Put home network first
+  combinedNets = sortHomeNet(combinedNets)
+
+  return combinedNets
+}
+
+const sortHomeNet = (networks) => {
+  const homeNetIndex = networks.findIndex(net => net[1] === homeNet.val)
+  if (homeNetIndex !== -1) {
+    const homeNet = networks.splice(homeNetIndex, 1)[0]
+    networks.unshift(homeNet)
+  }
+  return networks
+}
+
+const rssiToSignal = (rssi) => {
+  if (rssi === null) return 0;
+  if (rssi >= -65) return 3;
+  if (rssi >= -75) return 2;
+  return 1;
 }
 
 const saveSettings = () => {
   if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(CBOR.encode({ action: ACTIONS.SAVE, acc: newAcc.val, ssid: ssid.val, pass: pass.val }))
+    ws.send(CBOR.encode({ action: ACTIONS.SAVE, acc: acc.val || newAcc.val, ssid: ssid.val, pass: pass.val }))
+  } else {
+    showMsg(tt('error'), tt('wsNotConnected'))
+  }
+}
+
+const requestScan = () => {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(CBOR.encode({ action: ACTIONS.SCAN }))
   } else {
     showMsg(tt('error'), tt('wsNotConnected'))
   }
@@ -117,26 +182,245 @@ const showMsg = (title, message) => {
 }
 
 const isAccRequired = () => !acc.val && (!newAcc.val || !newAcc.val.trim())
-const isAccWarn = () => acc.val && newAcc.val && newAcc.val !== acc.val
+const isSsidRequired = () => isManualNet.val && !ssid.val.trim()
+const isPassRequired = () => selectedNet.val?.[3] && !pass.val.trim()
 
 const getAccHint = () => {
   if (isAccRequired()) {
     return tt('accRequired')
   }
-  if (isAccWarn()) {
-    return tt('accWarn')
-  }
-  if (acc.val && (!newAcc.val || newAcc.val === acc.val)) {
-    return tt('accOkSame')
-  }
-  return tt('accOk')
+  // if (isAccWarn()) {
+  //   return tt('accWarn')
+  // }
+  // if (acc.val && (!newAcc.val || newAcc.val === acc.val)) {
+  //   return tt('accOkSame')
+  // }
+  // return tt('accOk')
+  return ''
 }
 
-const NetworkField = (net) =>
-  li({ style: 'list-style: "🛜 "' }, `(${net[0]}) `, net[1], ' [', net[2], ' dBm, ', net[3] ? '🔒' : '🔓', ']')
+const setLoading = (isLoading) => {
+  connecting.val = isLoading
+  scanPause.val = isLoading
+  if (isLoading) {
+    document.getElementById('accountId')?.setAttribute('readonly', '')
+  } else {
+    document.getElementById('accountId')?.removeAttribute('readonly')
+  }
+}
+
+const submit = (e) => {
+  e.preventDefault()
+  accError.val = isAccRequired()
+  ssidError.val = isSsidRequired()
+  passError.val = isPassRequired()
+  if (!accError.val && !ssidError.val && !passError.val) {
+    setLoading(true)
+    ssid.val = ssid.val.trim() || selectedNet.val[1]
+    saveSettings()
+  }
+}
+
+const resetForm = () => {
+  scanPause.val = false
+  selectedNet.val = null
+  pass.val = ''
+  passError.val = false
+  passType.val = 'password'
+  ssid.val = ''
+  ssidError.val = false
+  isManualNet.val = false
+}
+
+// Account form component
+const DeviceInfo = () =>
+  article({ class: "device-info" },
+    header(h5("Device Information")),
+    div(b(t('id')), ': ', span(id)),
+    div(b(t('acc')), ': ', van.derive(() => (acc.val ? span(acc) : span(tt('accEmpty'))))),
+    div(
+      b(t('webSocket')),
+      ': ',
+      van.derive(() => span({ style: `color: ${wsStatus.val ? 'green' : 'red'}` }, wsStatus.val ? t('connected') : t('disconnected'))),
+    ),
+    van.derive(() => !acc.val
+      ? div(
+          br(),
+          input({
+            type: "text",
+            id: "accountId",
+            class: 'account-input',
+            placeholder: t('newAcc'),
+            value: newAcc,
+            'aria-invalid': van.derive(() => accError.val ? 'true' : 'null'),
+            "aria-describedby": "accHint",
+            oninput: (e) => {
+              newAcc.val = e.target.value
+              accError.val = false
+            }
+          }),
+          small({
+            id: "accHint",
+            style: van.derive(() => `display: ${accError.val ? 'block' : 'none'}`)
+          }, van.derive(() => getAccHint())),
+      )
+      : null
+    ),
+  );
+
+// Network list component
+const Networks = () =>
+  article({
+    class: "networks"
+  },
+    header(h5("Available Networks")),
+    main(
+      van.derive(() => div(nets.val.map(net => NetworkItem(net)))),
+      OtherNetworkItem()
+    ),
+  );
+
+const PasswordInput = (bssid) => {
+  const fieldsetId = `passFieldset_${bssid}`
+  const inputId = `passInput_${bssid}`
+  return div(
+    fieldset({
+      role: 'group',
+      id: fieldsetId,
+      'aria-invalid': van.derive(() => passError.val ? 'true' : 'null'),
+    },
+      input({
+        type: passType,
+        id: inputId,
+        class: "password-input",
+        placeholder: t('pass'),
+        value: pass,
+        'aria-invalid': van.derive(() => passError.val ? 'true' : 'null'),
+        oninput: (e) => {
+          pass.val = e.target.value
+          scanPause.val = true
+          passError.val = false
+        }
+      }),
+      button({
+        class: "password-toggle outline",
+        type: "button",
+        'aria-invalid': van.derive(() => passError.val ? 'true' : 'null'),
+        'data-visible': van.derive(() => passType.val === 'text'),
+        onclick: () => {
+          passType.val = passType.val === 'text' ? 'password' : 'text'
+        }
+      }, "")
+    ),
+    small({
+      style: van.derive(() => `display: ${passError.val ? 'block' : 'none'}`)
+    }, t('passHint'))
+  );
+}
+
+// Network item component
+const NetworkItem = (network) =>
+  details({
+    class: "network-item",
+    name: "network",
+    open: van.derive(() => selectedNet.val?.[0] === network[0]),
+    'aria-busy': van.derive(() => connecting.val && selectedNet.val?.[0] === network[0]),
+    'data-home-network': van.derive(() => homeNet.val === network[1]),
+  },
+    summary({
+      "data-signal": rssiToSignal(network[2]),
+      "data-secured": network[3],
+      'data-home-network': van.derive(() => homeNet.val === network[1]),
+      onclick: (e) => {
+        if (connecting.val) {
+          e.preventDefault()
+          return
+        }
+        const prevNetBssid = selectedNet.val?.[0]
+        resetForm()
+        if (prevNetBssid !== network[0]) {
+          selectedNet.val = network
+        }
+      }
+    },
+      div({ class: "network-ssid" },
+        span(network[1])
+      )
+    ),
+    NetworkDetails(network)
+  );
+
+// Network form component
+const NetworkDetails = (network) => {
+  return form({ onsubmit: (e) => {
+    ssid.val = network[1]
+    submit(e)
+  } },
+    [
+      div({ class: "network-details" }, [
+        b("BSSID: "), span(network[0]),
+        br(),
+        b("RSSI: "), van.derive(() => network[2] !== null ? span(`${network[2]} dBm`) : span("N/A")),
+      ]),
+      van.derive(() => (homeNet.val !== network[1]) && network[3] ? PasswordInput(network[0]) : null),
+      van.derive(() => homeNet.val !== network[1] ? button({ type: "submit" }, "Connect") : null),
+    ]
+  );
+};
+
+// Other network component
+const OtherNetworkItem = () => {
+  return details({
+    class: "network-item other",
+    name: "network",
+    open: van.derive(() => isManualNet.val),
+    'aria-busy': van.derive(() => connecting.val && isManualNet.val),
+  },
+    summary({
+      onclick: (e) => {
+        if (connecting.val) {
+          e.preventDefault()
+          return
+        }
+        resetForm()
+        isManualNet.val = !isManualNet.val
+      }
+    },
+      div({ class: "network-info" },
+        span("Other...")
+      )
+    ),
+    form({ onsubmit: submit },
+      input({
+        type: "text",
+        id: "ssidInput",
+        placeholder: "SSID",
+        value: ssid,
+        'aria-invalid': van.derive(() => ssidError.val ? 'true' : 'null'),
+        'aria-describedby': 'ssidHint',
+        oninput: (e) => {
+          ssid.val = e.target.value
+          ssidError.val = false
+        }
+      }),
+      small({
+        id: "ssidHint",
+        style: van.derive(() => `display: ${ssidError.val ? 'block' : 'none'}`)
+      }, t('ssidHint')),
+      PasswordInput('other'),
+      button({ type: "submit" }, "Connect")
+    )
+  );
+};
 
 const App = () => {
-  connectWebSocket()
+  connectWebSocket();
+
+  setInterval(() => {
+    if (!scanPause.val) {
+      requestScan();
+    }
+  }, 5000);
 
   return div(
     dialog(
@@ -157,96 +441,7 @@ const App = () => {
         )
       )
     ),
-
-    article(
-      header(b(t('deviceInformation'))),
-      div(t('id'), ': ', span(id)),
-      div(
-        t('acc'),
-        ': ',
-        van.derive(() => (acc.val ? span(acc) : span(tt('accEmpty'))))
-      ),
-      div(
-        t('wsConnected'),
-        ': ',
-        van.derive(() => span({ style: `color: ${wsStatus.val ? 'green' : 'red'}` }, wsStatus.val ? t('yes') : t('no')))
-      ),
-      br(),
-      label(
-        t('newAcc'),
-        ': ',
-        input({
-          type: 'text',
-          name: 'acc',
-          value: newAcc,
-          'aria-invalid': van.derive(() => Boolean(isAccRequired() || isAccWarn())),
-          'aria-describedby': 'accHint',
-          oninput: (e) => {
-            newAcc.val = e.target.value
-          }
-        }),
-        small({ id: 'accHint' }, van.derive(getAccHint))
-      )
-    ),
-
-    article(
-      header(b(t('networks'))),
-      van.derive(() => ul(nets.val.map((d) => NetworkField(d)))),
-      hr(),
-      label(
-        t('ssid'),
-        ': ',
-        input({
-          type: 'text',
-          name: 'ssid',
-          value: ssid,
-          'aria-invalid': ssidHintRequired,
-          'aria-describedby': 'ssidHint',
-          oninput: (e) => {
-            ssidHintRequired.val = null
-            ssid.val = e.target.value
-          }
-        }),
-        van.derive(() => small({ id: 'ssidHint' }, ssidHintRequired.val ? t('ssidHint') : null))
-      ),
-      label(
-        t('pass'),
-        ': ',
-        fieldset(
-          { role: 'group' },
-          input({
-            type: passType,
-            name: 'pass',
-            value: pass,
-            oninput: (e) => {
-              pass.val = e.target.value
-            }
-          }),
-          input({
-            class: 'outline',
-            type: 'submit',
-            value: '👁️',
-            onclick: () => {
-              passType.val = passType.val === 'text' ? 'password' : 'text'
-            }
-          })
-        )
-      ),
-      input({
-        type: 'button',
-        value: t('save'),
-        onclick: () => {
-          if (!ssid.val) {
-            ssidHintRequired.val = true
-          }
-          if (!ssid.val || isAccRequired()) {
-            showMsg(tt('error'), tt('fillAllFields'))
-          } else {
-            saveSettings()
-            showMsg(tt('success'), tt('settingsSaved'))
-          }
-        }
-      })
-    )
-  )
+    DeviceInfo(),
+    Networks()
+  );
 }

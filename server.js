@@ -17,7 +17,8 @@ const KEYS = {
 
 const ACTIONS = {
   STATUS: 0,
-  SAVE: 1
+  SAVE: 1,
+  SCAN: 2
 }
 
 const netsSamples = [
@@ -41,7 +42,8 @@ const netsSamples = [
 let status = {
   id: 'Device001',
   acc: '',
-  nets: netsSamples[0]
+  nets: netsSamples[2],
+  homeNet: '',
 }
 
 function broadcast(data) {
@@ -52,12 +54,6 @@ function broadcast(data) {
     }
   })
 }
-
-setInterval(() => {
-  const randomIndex = Math.floor(Math.random() * netsSamples.length)
-  status.nets = netsSamples[randomIndex]
-  broadcast(status)
-}, 3000)
 
 wsServer.on('connection', (ws) => {
   console.log('Client connected')
@@ -73,10 +69,14 @@ wsServer.on('connection', (ws) => {
         broadcast(status)
       } else if (decoded[KEYS.ACTION] === ACTIONS.SAVE) {
         status.acc = decoded.acc
+        status.homeNet = decoded.ssid
         console.log('Settings saved:', status)
         setTimeout(() => {
           broadcast({ success: true })
         }, 3000)
+      } else if (decoded[KEYS.ACTION] === ACTIONS.SCAN) {
+        status.nets = netsSamples[Math.floor(Math.random() * netsSamples.length)]
+        broadcast(status)
       } else {
         console.error('Unknown action:', decoded[KEYS.ACTION])
       }
