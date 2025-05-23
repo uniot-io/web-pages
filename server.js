@@ -16,9 +16,9 @@ const KEYS = {
 }
 
 const ACTIONS = {
-  STATUS: 0,
-  SAVE: 1,
-  SCAN: 2
+  STATUS: 100,
+  SAVE: 101,
+  SCAN: 102
 }
 
 const netsSamples = [

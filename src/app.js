@@ -1,10 +1,11 @@
 const ACTIONS = {
-  STATUS: 0,
-  SAVE: 1,
-  SCAN: 2
+  STATUS: 100,
+  SAVE: 101,
+  SCAN: 102,
+  ASK: 103
 }
 
-const RSSI_THRESHOLD = -75
+const RSSI_THRESHOLD = -95
 const SMOOTHING_ALPHA = 0.3
 
 const { details, summary, div, input, span, label, hr, ul, li, dialog, button, h2, h5, form, main, p, footer, article, header, fieldset, br, b, small } =
@@ -39,6 +40,9 @@ if (localStorage.account) {
 const tt = (key) => translations[language.val][key] || key
 const t = (key) => van.derive(() => tt(key))
 
+let requestScanTimeout = null
+let askInterval = null
+
 let ws = null
 const connectWebSocket = () => {
   ws = new WebSocket(`ws://${window.location.host}/ws`)
@@ -55,15 +59,27 @@ const connectWebSocket = () => {
       if (data.id !== undefined) id.val = data.id
       if (data.acc !== undefined) acc.val = data.acc
       if (data.homeNet !== undefined) homeNet.val = data.homeNet
-      if (data.nets !== undefined) nets.val = processNetworks(nets.val, data.nets)
+      if (data.nets !== undefined) {
+        if (!scanPause.val) {
+          nets.val = processNetworks(nets.val, data.nets)
+        }
+        if (requestScanTimeout) {
+          clearTimeout(requestScanTimeout)
+          requestScanTimeout = null
+        }
+        requestScanTimeout = setTimeout(requestScan, 5000)
+      }
       if (data.success !== undefined) {
         setLoading(false)
+        clearInterval(askInterval)
+        askInterval = null
         if (data.success) {
           homeNet.val = ssid.val
           acc.val = newAcc.val || acc.val
           resetForm()
           showMsg(tt('success'), tt('connectSuccess'))
         } else {
+          homeNet.val = ''
           showMsg(tt('error'), tt('connectError'))
         }
       }
@@ -161,7 +177,7 @@ const rssiToSignal = (rssi) => {
 
 const saveSettings = () => {
   if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(CBOR.encode({ action: ACTIONS.SAVE, acc: acc.val || newAcc.val, ssid: ssid.val, pass: pass.val }))
+    ws.send(CBOR.encode({ action: ACTIONS.SAVE, acc: newAcc.val || acc.val, ssid: ssid.val, pass: pass.val }))
   } else {
     showMsg(tt('error'), tt('wsNotConnected'))
   }
@@ -172,6 +188,12 @@ const requestScan = () => {
     ws.send(CBOR.encode({ action: ACTIONS.SCAN }))
   } else {
     showMsg(tt('error'), tt('wsNotConnected'))
+  }
+}
+
+const ask = () => {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(CBOR.encode({ action: ACTIONS.ASK }))
   }
 }
 
@@ -218,6 +240,9 @@ const submit = (e) => {
     setLoading(true)
     ssid.val = ssid.val.trim() || selectedNet.val[1]
     saveSettings()
+    if (!askInterval) {
+      askInterval = setInterval(ask, 3000);
+    }
   }
 }
 
@@ -243,7 +268,7 @@ const DeviceInfo = () =>
       ': ',
       van.derive(() => span({ style: `color: ${wsStatus.val ? 'green' : 'red'}` }, wsStatus.val ? t('connected') : t('disconnected'))),
     ),
-    van.derive(() => !acc.val
+    van.derive(() => true /*!acc.val*/
       ? div(
           br(),
           input({
@@ -251,6 +276,7 @@ const DeviceInfo = () =>
             id: "accountId",
             class: 'account-input',
             placeholder: t('newAcc'),
+            name: 'acc',
             value: newAcc,
             'aria-invalid': van.derive(() => accError.val ? 'true' : 'null'),
             "aria-describedby": "accHint",
@@ -292,8 +318,10 @@ const PasswordInput = (bssid) => {
       input({
         type: passType,
         id: inputId,
+        autocomplete: "off",
         class: "password-input",
         placeholder: t('pass'),
+        name: 'pass',
         value: pass,
         'aria-invalid': van.derive(() => passError.val ? 'true' : 'null'),
         oninput: (e) => {
@@ -395,6 +423,7 @@ const OtherNetworkItem = () => {
         type: "text",
         id: "ssidInput",
         placeholder: "SSID",
+        name: 'ssid',
         value: ssid,
         'aria-invalid': van.derive(() => ssidError.val ? 'true' : 'null'),
         'aria-describedby': 'ssidHint',
@@ -415,12 +444,6 @@ const OtherNetworkItem = () => {
 
 const App = () => {
   connectWebSocket();
-
-  setInterval(() => {
-    if (!scanPause.val) {
-      requestScan();
-    }
-  }, 5000);
 
   return div(
     dialog(
