@@ -33,6 +33,9 @@
     </main>
     <!-- smoosh -->
     <script>
+      if (window.location.hostname !== 'uniot.local') {
+        window.location.replace('http://uniot.local')
+      }
       van.add(document.getElementById('app'), App())
     </script>
     <!-- endsmoosh -->
