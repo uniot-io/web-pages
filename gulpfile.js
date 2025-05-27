@@ -63,7 +63,8 @@ gulp.task('minify:css', () => {
             {
               discardComments: {
                 removeAll: true
-              }
+              },
+              zindex: false,
             }
           ]
         })

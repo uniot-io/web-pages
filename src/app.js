@@ -6,7 +6,7 @@ const ACTIONS = {
 }
 
 const RSSI_THRESHOLD = -95
-const SMOOTHING_ALPHA = 0.3
+const SMOOTHING_ALPHA = 0.4
 
 const { details, summary, div, input, span, label, hr, ul, li, dialog, button, h2, h5, form, main, p, footer, article, header, fieldset, br, b, small } =
   van.tags
@@ -121,6 +121,8 @@ const processNetworks = (oldNets, newNets) => {
 
   // Decay RSSI for networks not seen in the current scan
   for (const [bssid, { ssid, rssi, secured }] of oldNetsMap.entries()) {
+    if (rssi === null) continue; // Skip networks with no RSSI
+
     const decayedRssi = Math.round(SMOOTHING_ALPHA * -100 + (1 - SMOOTHING_ALPHA) * rssi)
 
     if (decayedRssi >= RSSI_THRESHOLD) {
